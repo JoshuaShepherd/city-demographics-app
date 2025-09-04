@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { CITIES } from '@/lib/data';
 import InteractiveMap from '@/components/InteractiveMapPNG';
 
@@ -42,9 +43,9 @@ export default function Home() {
                 transition={{ duration: 0.4, delay: index * 0.05 }}
                 className="h-full" // Ensure full height
               >
-                <div className="block h-full">
+                <Link href={`/city/${city.id}`} className="block h-full">
                   <CityCard city={city} />
-                </div>
+                </Link>
               </motion.div>
             ))}
           </div>

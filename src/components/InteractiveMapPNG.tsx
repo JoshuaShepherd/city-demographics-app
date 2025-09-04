@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CITIES } from '@/lib/data';
 import { getCityCoordinates } from '@/lib/us-map';
@@ -12,6 +13,8 @@ interface InteractiveMapProps {
 }
 
 export default function InteractiveMap({ onCitySelect }: InteractiveMapProps = {}) {
+  const router = useRouter();
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
 
   return (
@@ -42,9 +45,9 @@ export default function InteractiveMap({ onCitySelect }: InteractiveMapProps = {
 
                 const isHovered = hoveredCity === city.id;
 
-                // Convert coordinates to percentage positions on the 1280x800 image
-                const leftPercent = (coords.x / 960) * 100; // Adjust from 960 to percentage
-                const topPercent = (coords.y / 500) * 100;   // Adjust from 500 to percentage
+                // Convert coordinates to percentage positions - corrected for proper alignment
+                const leftPercent = ((coords.x + 50) / 960) * 100; // Corrected positioning
+                const topPercent = ((coords.y + 30) / 500) * 100;   // Corrected positioning
 
                 return (
                   <motion.div
@@ -58,8 +61,19 @@ export default function InteractiveMap({ onCitySelect }: InteractiveMapProps = {
                       top: `${topPercent}%`,
                     }}
                     onMouseEnter={() => setHoveredCity(city.id)}
-                    onMouseLeave={() => setHoveredCity(null)}
+                    onMouseLeave={() => {
+                      if (selectedCity !== city.id) {
+                        setHoveredCity(null);
+                      }
+                    }}
                     onClick={() => {
+                      // Double-click or tap to navigate to city page
+                      if (selectedCity === city.id) {
+                        router.push(`/city/${city.id}`);
+                      } else {
+                        setSelectedCity(city.id);
+                        setHoveredCity(city.id);
+                      }
                       onCitySelect?.(city.id);
                     }}
                   >
@@ -139,26 +153,44 @@ export default function InteractiveMap({ onCitySelect }: InteractiveMapProps = {
 
       {/* City Info Panel */}
       <AnimatePresence>
-        {hoveredCity && (
+        {(selectedCity || hoveredCity) && (
           <motion.div
             initial={{ opacity: 0, x: -50, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -50, scale: 0.8 }}
-            className="absolute left-8 top-1/2 transform -translate-y-1/2 z-40"
+            className="absolute left-4 md:left-8 top-1/2 transform -translate-y-1/2 z-40"
+            onMouseEnter={() => setHoveredCity(selectedCity || hoveredCity)}
+            onMouseLeave={() => {
+              if (!selectedCity) {
+                setHoveredCity(null);
+              }
+            }}
           >
             {(() => {
-              const city = CITIES.find(c => c.id === hoveredCity);
+              const currentCityId = selectedCity || hoveredCity;
+              const city = CITIES.find(c => c.id === currentCityId);
               if (!city) return null;
 
               return (
                 <motion.div 
-                  className="backdrop-blur-2xl rounded-3xl p-8 text-white border border-white/30 max-w-sm shadow-2xl"
+                  className="backdrop-blur-2xl rounded-3xl p-4 md:p-8 text-white border border-white/30 max-w-xs md:max-w-sm shadow-2xl"
                   style={{
                     background: `linear-gradient(135deg, ${city.accent.primary}25, ${city.accent.secondary}25)`,
                     boxShadow: `0 25px 50px rgba(0, 0, 0, 0.6), 0 0 50px ${city.accent.primary}30`
                   }}
                   layoutId={`city-panel-${city.id}`}
                 >
+                  {/* Close button for mobile/touch */}
+                  <button 
+                    onClick={() => {
+                      setSelectedCity(null);
+                      setHoveredCity(null);
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-white/60 hover:text-white hover:bg-black/40 transition-all md:hidden"
+                  >
+                    ✕
+                  </button>
+                  
                   <motion.h3 
                     className="text-4xl font-bold mb-2"
                     style={{ 
